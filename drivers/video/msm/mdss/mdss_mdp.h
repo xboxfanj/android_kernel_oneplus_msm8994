@@ -29,6 +29,9 @@
 #define MDSS_MDP_DEFAULT_INTR_MASK 0
 #define MDSS_MDP_PIXEL_RAM_SIZE (50 * 1024)
 
+#define SVS_PLUS_MIN_HW_110 171430000
+#define SVS_PLUS_MAX_HW_110 266670000
+
 #define PHASE_STEP_SHIFT	21
 #define MAX_LINE_BUFFER_WIDTH	2048
 #define MAX_MIXER_HEIGHT	0xFFFF
@@ -217,6 +220,13 @@ struct mdss_mdp_ctl_intfs_ops {
 	int (*config_fps_fnc)(struct mdss_mdp_ctl *ctl,
 				struct mdss_mdp_ctl *sctl, int new_fps);
 	int (*restore_fnc)(struct mdss_mdp_ctl *ctl);
+
+	/*
+	 * reconfigure interface for new resolution, called before (pre=1)
+	 * and after interface has been reconfigured (pre=0)
+	 */
+	int (*reconfigure)(struct mdss_mdp_ctl *ctl,
+			enum dynamic_switch_modes mode, bool pre);
 };
 
 struct mdss_mdp_ctl {
@@ -291,7 +301,7 @@ struct mdss_mdp_ctl {
 	void *intf_ctx[2];
 	u32 wb_type;
 	u32 prg_fet;
-	bool force_ctl_start;
+	int pending_mode_switch;
 };
 
 struct mdss_mdp_mixer {
@@ -398,7 +408,7 @@ struct pp_hist_col_info {
 	spinlock_t hist_lock;
 	char __iomem *base;
 	u32 intr_shift;
-	u32 disp_num;//qualcomm provide patch in 2015-07-03
+	u32 disp_num;
 };
 
 struct mdss_mdp_ad {
@@ -859,6 +869,14 @@ static inline u32 left_lm_w_from_mfd(struct msm_fb_data_type *mfd)
 static inline u32 mdss_mdp_get_cursor_frame_size(struct mdss_data_type *mdata)
 {
 	return mdata->max_cursor_size *  mdata->max_cursor_size * 4;
+}
+
+static inline bool __is_mdp_clk_svs_plus_range(struct mdss_data_type *mdata,
+		u32 rate)
+{
+	return (mdss_has_quirk(mdata, MDSS_QUIRK_SVS_PLUS_VOTING)) &&
+		(rate > mdata->svs_plus_min) &&
+		(rate <= mdata->svs_plus_max);
 }
 
 irqreturn_t mdss_mdp_isr(int irq, void *ptr);

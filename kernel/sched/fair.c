@@ -1705,12 +1705,11 @@ void down_migrate_task(struct task_struct *p)
  */
 static int task_load_will_fit(struct task_struct *p, u64 task_load, int cpu)
 {
-        int prev_cpu = task_cpu(p);
-	struct rq *prev_rq = cpu_rq(prev_cpu);
+	struct rq *prev_rq = cpu_rq(task_cpu(p));
 	struct rq *rq = cpu_rq(cpu);
 #ifdef VENDOR_EDIT
-	int thermal_mitigation = 0;
-	int prev_cpu_throttled = 0, cpu_throttled = 0, ta_enabled = 0;
+        int thermal_mitigation = 0;
+        int prev_cpu_throttled = 0, cpu_throttled = 0, ta_enabled = 0;
 #endif
 	int upmigrate, nice;
 
@@ -1749,6 +1748,7 @@ static int task_load_will_fit(struct task_struct *p, u64 task_load, int cpu)
 #ifdef VENDOR_EDIT
 		if (prev_rq->capacity > rq->capacity || thermal_mitigation)
 #else
+		upmigrate = sched_upmigrate;
 		if (prev_rq->capacity > rq->capacity)
 #endif
 			upmigrate = sched_downmigrate;
@@ -1758,6 +1758,7 @@ static int task_load_will_fit(struct task_struct *p, u64 task_load, int cpu)
 			if (thermal_mitigation)
 				down_migrate_task(p);
 #endif
+		if (task_load < upmigrate)
 			return 1;
 		}
 	}
@@ -1771,8 +1772,7 @@ static int task_will_fit(struct task_struct *p, int cpu)
 	return task_load_will_fit(p, tload, cpu);
 }
 
-static int eligible_cpu(struct task_struct *p,
-            u64 task_load, u64 cpu_load, int cpu, int sync)
+static int eligible_cpu(u64 task_load, u64 cpu_load, int cpu, int sync)
 {
 	struct rq *rq = cpu_rq(cpu);
 
@@ -1791,6 +1791,8 @@ static int eligible_cpu(struct task_struct *p,
 #endif
 		return !spill_threshold_crossed(task_load, cpu_load, rq);
 	}
+	if (rq->max_possible_capacity != max_possible_capacity)
+		return !spill_threshold_crossed(task_load, cpu_load, rq);
 
 	return 0;
 }
@@ -1995,7 +1997,7 @@ static int skip_freq_domain(struct rq *task_rq, struct rq *rq, int reason)
 #ifdef VENDOR_EDIT
 		if (!sysctl_thermal_aware_scheduling)
 #endif
-		    skip = rq->capacity != task_rq->capacity;
+		skip = rq->capacity != task_rq->capacity;
 		break;
 
 	case IRQLOAD_MIGRATION:
@@ -2147,6 +2149,13 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		tload =  scale_load_to_cpu(task_load(p), i);
 		if (skip_cpu(trq, rq, i, tload, reason))
 			continue;
+		}
+
+		tload =  scale_load_to_cpu(task_load(p), i);
+		if (skip_cpu(trq, rq, i, tload, reason))
+			continue;
+
+		prev_cpu = (i == task_cpu(p));
 
 		prev_cpu = (i == task_cpu(p));
 
@@ -2179,7 +2188,7 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 			prefer_idle = cpu_rq(i)->prefer_idle;
 
 		cpu_load = cpu_load_sync(i, sync);
-		if (!eligible_cpu(p, tload, cpu_load, i, sync))
+		if (!eligible_cpu(tload, cpu_load, i, sync))
 			continue;
 
 		/*

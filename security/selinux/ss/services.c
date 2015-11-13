@@ -640,8 +640,8 @@ void services_compute_operation_type(
 }
 
 /*
- * Compute access vectors based on a context structure pair for
- * the permissions in a particular class.
+ * Compute access vectors and operations ranges based on a context
+ * structure pair for the permissions in a particular class.
  */
 static void context_struct_compute_av(struct context *scontext,
 					struct context *tcontext,
@@ -1058,7 +1058,6 @@ allow:
 	memset(od->allowed->perms, 0xff, sizeof(od->allowed->perms));
 	goto out;
 }
-
 /**
  * security_compute_av - Compute access vector decisions.
  * @ssid: source security identifier

@@ -211,6 +211,7 @@ struct msm_vfe_pix_cfg {
 	enum msm_vfe_inputmux input_mux;
 	enum ISP_START_PIXEL_PATTERN pixel_pattern;
 	uint32_t input_format;
+	uint32_t is_split;
 };
 
 struct msm_vfe_rdi_cfg {
@@ -285,7 +286,7 @@ enum msm_vfe_axi_stream_cmd {
 
 struct msm_vfe_axi_stream_cfg_cmd {
 	uint8_t num_streams;
-	uint32_t stream_handle[MAX_NUM_STREAM];
+	uint32_t stream_handle[VFE_AXI_SRC_MAX];
 	enum msm_vfe_axi_stream_cmd cmd;
 };
 

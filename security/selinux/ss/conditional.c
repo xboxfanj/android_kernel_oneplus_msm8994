@@ -635,7 +635,6 @@ void cond_compute_operation(struct avtab *ctab, struct avtab_key *key,
 	return;
 
 }
-
 /* Determine whether additional permissions are granted by the conditional
  * av table, and if so, add them to the result
  */

@@ -1032,6 +1032,16 @@ struct ipa_sps_pm {
 };
 
 /**
+ * struct ipacm_client_info - the client-info indicated from IPACM
+ * @ipacm_client_enum: the enum to indicate tether-client
+ * @ipacm_client_uplink: the bool to indicate pipe for uplink
+ */
+struct ipacm_client_info {
+	enum ipacm_client_enum client_enum;
+	bool uplink;
+};
+
+/**
  * struct ipa_context - IPA context
  * @class: pointer to the struct class
  * @dev_num: device number
@@ -1188,6 +1198,8 @@ struct ipa_context {
 
 	struct ipa_uc_wdi_ctx uc_wdi_ctx;
 	u32 wan_rx_ring_size;
+	/* M-release support to know client pipes */
+	struct ipacm_client_info ipacm_client[IPA_NUM_PIPES];
 };
 
 /**
@@ -1342,6 +1354,15 @@ struct ipa_controller {
 };
 
 extern struct ipa_context *ipa_ctx;
+
+/*
+ * Tethering client info
+ */
+void ipa_set_client(int index, enum ipacm_client_enum client, bool uplink);
+
+enum ipacm_client_enum ipa_get_client(int pipe_idx);
+
+bool ipa_get_client_uplink(int pipe_idx);
 
 int ipa_send_one(struct ipa_sys_context *sys, struct ipa_desc *desc,
 		bool in_atomic);
@@ -1528,4 +1549,5 @@ int ipa_uc_mhi_resume_channel(int channelHandle, bool LPTransitionRejected);
 int ipa_uc_mhi_stop_event_update_channel(int channelHandle);
 int ipa_uc_mhi_print_stats(char *dbg_buff, int size);
 int ipa_uc_memcpy(phys_addr_t dest, phys_addr_t src, int len);
+void ipa_sps_irq_rx_notify_all(void);
 #endif /* _IPA_I_H_ */
